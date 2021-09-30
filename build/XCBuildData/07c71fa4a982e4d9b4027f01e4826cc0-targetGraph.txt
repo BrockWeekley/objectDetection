@@ -1,0 +1,10 @@
+Target dependency graph (4 targets)
+ZERO_CHECK in assignment-two
+gray2binary in assignment-two, depends on:
+ZERO_CHECK in assignment-two (explicit)
+CCL in assignment-two, depends on:
+ZERO_CHECK in assignment-two (explicit)
+ALL_BUILD in assignment-two, depends on:
+ZERO_CHECK in assignment-two (explicit)
+gray2binary in assignment-two (explicit)
+CCL in assignment-two (explicit)

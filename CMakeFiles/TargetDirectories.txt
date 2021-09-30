@@ -1,0 +1,4 @@
+/Users/brock/dev/projects/DIPFall2021_Weekley_Brock_Assignment2/CMakeFiles/gray2binary.dir
+/Users/brock/dev/projects/DIPFall2021_Weekley_Brock_Assignment2/CMakeFiles/CCL.dir
+/Users/brock/dev/projects/DIPFall2021_Weekley_Brock_Assignment2/CMakeFiles/ALL_BUILD.dir
+/Users/brock/dev/projects/DIPFall2021_Weekley_Brock_Assignment2/CMakeFiles/ZERO_CHECK.dir
