@@ -34,6 +34,23 @@ Color random_color() {
     return colors[random];
 }
 
+int find(int currentLabel, int parent []) {
+    while (parent[currentLabel] != 0) {
+//        printf("\nLoop Value: %d", parent[currentLabel]);
+        currentLabel = parent[currentLabel];
+    }
+    return currentLabel;
+}
+
+void union_labels(int firstLabel, int secondLabel, int parent []) {
+    int foundFirst = find(firstLabel, parent);
+    int foundSecond = find(secondLabel, parent);
+    if (foundFirst != foundSecond) {
+        parent[foundSecond] = foundFirst;
+    }
+}
+
+
 int main(int argc, char** argv )
 {
     if ( argc < 3 || argc > 6 )
@@ -75,7 +92,7 @@ int main(int argc, char** argv )
         cv::cvtColor(image, image, cv::COLOR_BGR2GRAY);
     }
     
-    cv::threshold(image, image, 100, 255, cv::THRESH_BINARY);
+    cv::threshold(image, image, 240, 255, cv::THRESH_BINARY);
     
     int height = image.size[0];
     int width = image.size[1];
@@ -121,7 +138,10 @@ int main(int argc, char** argv )
         }
     }
 
-    std::vector<int> parent;
+    int parent [2000];
+    for (int i = 0; i < 2000; i++) {
+        parent[i] = 0;
+    }
     int label = 1;
     for (int row = 0; row < height; row++) {
         for (int col = 0; col < width; col++) {
@@ -148,57 +168,51 @@ int main(int argc, char** argv )
                     c = 1;
                 }
                 
-                if (d == 1) {
-
-                    if (a == 1) {
-                        // 1 0 0
-                        // 1 a
-                        labels[row][col] = labels[row - 1][col - 1];
-                    }
-                    if (b == 1) {
-                        // 0 1 0
-                        // 1 b
-                        labels[row][col] = labels[row - 1][col];
-                    }
-                    if (c == 1) {
-                        // 0 0 1
-                        // 1 c
-                        // Union c and d
-                        labels[row][col] = labels[row - 1][col + 1];
-                    }
-                    // 0 0 0
-                    // 1 d
-                    labels[row][col] = labels[row][col - 1];
-                } else if (a == 1) {
-                    
-                    if (b == 1) {
-                        // 1 1 0
-                        // 0 b
-                        labels[row][col] = labels[row - 1][col];
-                    }
-                    if (c == 1) {
-                        // 1 0 1
-                        // 0 a
-                        // Union a and c
-                        labels[row][col] = labels[row - 1][col - 1];
-                    }
-                    // 1 0 0
-                    // 0 a
-                    labels[row][col] = labels[row - 1][col - 1];
-                } else if (b == 1) {
-                    
-                    if (c == 1) {
-                        // 0 1 1
-                        // 0 b
-                        labels[row][col] = labels[row - 1][col];
-                    }
+                // Decision tree 8-connected
+                if (b == 1) {
                     // 0 1 0
+                    // 0 b
+                    // or
+                    // 0 1 0
+                    // 0 b
+                    // or
+                    // 0 1 1
                     // 0 b
                     labels[row][col] = labels[row - 1][col];
                 } else if (c == 1) {
-                    // 0 0 1
-                    // 0 c
-                    labels[row][col] = labels[row - 1][col + 1];
+                    if (a == 1) {
+                        // 1 0 1
+                        // 0 a
+                        // Union(a, c)
+                        labels[row][col] = labels[row - 1][col - 1];
+                        union_labels(
+                                     labels[row - 1][col - 1],
+                                     labels[row - 1][col + 1],
+                                     parent
+                                     );
+                    } else if (d == 1) {
+                        // 0 0 1
+                        // 1 c
+                        // Union(c, d)
+                        labels[row][col] = labels[row - 1][col + 1];
+                        union_labels(
+                                     labels[row - 1][col + 1],
+                                     labels[row][col - 1],
+                                     parent
+                                     );
+                    } else {
+                        // 0 0 1
+                        // 0 c
+                        labels[row][col] = labels[row - 1][col + 1];
+                    }
+                } else if (a == 1) {
+                    // 1 0 0
+                    // 0 a
+                    labels[row][col] = labels[row - 1][col - 1];
+                } else if (d == 1) {
+                    // 0 0 0
+                    // 1 d
+                    labels[row][col] = labels[row][col - 1];
                 } else {
                     labels[row][col] = label;
                     label++;
@@ -218,6 +232,15 @@ int main(int argc, char** argv )
 //            }
         }
     }
+    
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            if (labels[row][col] != 0) {
+                labels[row][col] = find(labels[row][col], parent);
+            }
+        }
+    }
+    
     Color labelColor [label];
     labelColor[0] = {0, 0, 0};
     for (int currentLabel = 1; currentLabel <= label; currentLabel++) {
@@ -250,9 +273,9 @@ int main(int argc, char** argv )
         }
     }
     
-    for (int currentLabel = 1; currentLabel <= label; currentLabel++) {
-        printf("\nObject Area: %d", objectAreas[currentLabel]);
-    }
+//    for (int currentLabel = 1; currentLabel <= label; currentLabel++) {
+//        printf("\nObject Area: %d", objectAreas[currentLabel]);
+//    }
     
     cv::imshow("Display", newImage);
     cv::waitKey(0);
@@ -260,7 +283,6 @@ int main(int argc, char** argv )
     if (argc > 4) {
         // Also do part C
         int maxArea = atoi(arguments[2]);
-        printf("\n Max area: %d \n", maxArea);
         for (int currentLabel = 1; currentLabel <= label; currentLabel++) {
             if (objectAreas[currentLabel] < maxArea) {
                 for (int row = 0; row < height; row++) {
@@ -282,4 +304,19 @@ int main(int argc, char** argv )
         cv::imshow("Display", newImage);
         cv::waitKey(0);
     }
+    int objectCount = 0;
+    std::vector<int> parentVec;
+
+    for (int i = 0; i < 2000; i++) {
+        if (parent[i] != 0) {
+            printf("\nParent item: %d", parent[i]);
+            parentVec.push_back(parent[i]);
+        }
+    }
+    std::sort(parentVec.begin(), parentVec.end());
+    parentVec.erase(unique(parentVec.begin(), parentVec.end() ), parentVec.end());
+    objectCount = parentVec.size();
+        
+    printf("\nNumber of objects: %d\n", objectCount);
+    printf("IDs used during first pass: %d\n", label);
 }
