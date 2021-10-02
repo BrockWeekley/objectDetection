@@ -92,7 +92,7 @@ int main(int argc, char** argv )
         cv::cvtColor(image, image, cv::COLOR_BGR2GRAY);
     }
     
-    cv::threshold(image, image, 240, 255, cv::THRESH_BINARY);
+    cv::threshold(image, image, 125, 255, cv::THRESH_BINARY);
     
     int height = image.size[0];
     int width = image.size[1];
@@ -168,6 +168,11 @@ int main(int argc, char** argv )
                     c = 1;
                 }
                 
+                int dLabel = labels[row][col - 1];
+                int aLabel = labels[row - 1][col - 1];
+                int bLabel = labels[row - 1][col];
+                int cLabel = labels[row - 1][col + 1];
+                
                 // Decision tree 8-connected
                 if (b == 1) {
                     // 0 1 0
@@ -178,41 +183,41 @@ int main(int argc, char** argv )
                     // or
                     // 0 1 1
                     // 0 b
-                    labels[row][col] = labels[row - 1][col];
+                    labels[row][col] = bLabel;
                 } else if (c == 1) {
                     if (a == 1) {
                         // 1 0 1
                         // 0 a
                         // Union(a, c)
-                        labels[row][col] = labels[row - 1][col - 1];
+                        labels[row][col] = cLabel;
                         union_labels(
-                                     labels[row - 1][col - 1],
-                                     labels[row - 1][col + 1],
+                                     aLabel,
+                                     cLabel,
                                      parent
                                      );
                     } else if (d == 1) {
                         // 0 0 1
                         // 1 c
                         // Union(c, d)
-                        labels[row][col] = labels[row - 1][col + 1];
+                        labels[row][col] = cLabel;
                         union_labels(
-                                     labels[row - 1][col + 1],
-                                     labels[row][col - 1],
+                                     cLabel,
+                                     dLabel,
                                      parent
                                      );
                     } else {
                         // 0 0 1
                         // 0 c
-                        labels[row][col] = labels[row - 1][col + 1];
+                        labels[row][col] = cLabel;
                     }
                 } else if (a == 1) {
                     // 1 0 0
                     // 0 a
-                    labels[row][col] = labels[row - 1][col - 1];
+                    labels[row][col] = aLabel;
                 } else if (d == 1) {
                     // 0 0 0
                     // 1 d
-                    labels[row][col] = labels[row][col - 1];
+                    labels[row][col] = dLabel;
                 } else {
                     labels[row][col] = label;
                     label++;
@@ -232,6 +237,13 @@ int main(int argc, char** argv )
 //            }
         }
     }
+    
+//    for (int row = 0; row < height; row++) {
+//        printf("\n");
+//        for (int col = 0; col < width; col++) {
+//            printf("%d ", labels[row][col]);
+//        }
+//    }
     
     for (int row = 0; row < height; row++) {
         for (int col = 0; col < width; col++) {
@@ -307,11 +319,9 @@ int main(int argc, char** argv )
     int objectCount = 0;
     std::vector<int> parentVec;
 
-    for (int i = 0; i < 2000; i++) {
-        if (parent[i] != 0) {
-            printf("\nParent item: %d", parent[i]);
-            parentVec.push_back(parent[i]);
-        }
+    for (int i = 1; i < 2000; i++) {
+        printf("\nParent item: %d", parent[i]);
+        parentVec.push_back(parent[i]);
     }
     std::sort(parentVec.begin(), parentVec.end());
     parentVec.erase(unique(parentVec.begin(), parentVec.end() ), parentVec.end());

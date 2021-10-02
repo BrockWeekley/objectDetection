@@ -64,7 +64,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "../test_pictures/bubbles.png"
+            argument = "../test_pictures/connected_regions.png"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
