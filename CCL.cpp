@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <opencv2/opencv.hpp>
 
+bool perimeter = true;
+
 struct Color {
     int blue, green, red;
 };
@@ -92,7 +94,7 @@ int main(int argc, char** argv )
         cv::cvtColor(image, image, cv::COLOR_BGR2GRAY);
     }
     
-    cv::threshold(image, image, 125, 255, cv::THRESH_BINARY);
+    cv::threshold(image, image, 240, 255, cv::THRESH_BINARY);
     
     int height = image.size[0];
     int width = image.size[1];
@@ -260,11 +262,14 @@ int main(int argc, char** argv )
     }
     
     int objectAreas [label];
+    int objectPerimeters [label];
     objectAreas[0] = 0;
+    objectPerimeters[0] = 0;
     for (int currentLabel = 1; currentLabel <= label; currentLabel++) {
         objectAreas[currentLabel] = 0;
+        objectPerimeters[currentLabel] = 0;
     }
-    // Loop through labels array to apply colors
+    // Loop through labels array to apply colors and find area
     for (int row = 0; row < height; row++) {
         for (int col = 0; col < width; col++) {
             for (int currentLabel = 1; currentLabel <= label; currentLabel++) {
@@ -277,17 +282,67 @@ int main(int argc, char** argv )
                     color[1] = randomColor.green;
                     // R
                     color[2] = randomColor.red;
-                    newImage.at<cv::Vec3b>(row, col) = color;
+
                     
                     objectAreas[currentLabel]++;
+                    if (
+                        image.at<uchar>(row, col - 1) == 0 ||
+                        image.at<uchar>(row + 1, col) == 0 ||
+                        image.at<uchar>(row, col + 1) == 0 ||
+                        image.at<uchar>(row + 1, col) == 0 ||
+                        image.at<uchar>(row - 1, col - 1) == 0 ||
+                        image.at<uchar>(row + 1, col - 1) == 0 ||
+                        image.at<uchar>(row - 1, col + 1) == 0 ||
+                        image.at<uchar>(row + 1, col + 1) == 0
+                        ) {
+                        objectPerimeters[currentLabel]++;
+                    } else {
+                        if (perimeter) {
+                            color[0] = 0;
+                            color[1] = 0;
+                            color[2] = 0;
+                        }
+                    }
+                    newImage.at<cv::Vec3b>(row, col) = color;
                 }
             }
         }
     }
+    int tenLargestObjects [label];
+
+    int checkSize = 0;
+    for (int i = 0; i < label; i++) {
+        int currentMax = 0;
+        int currentMaxIndex = 0;
+        for (int currentLabel = 1; currentLabel < label; label++) {
+            bool skip = false;
+            for (int j = 0; j < checkSize; j++) {
+                if (tenLargestObjects[j] == currentLabel) {
+                    skip = true;
+                    break;
+                }
+            }
+            if (currentMax < objectAreas[currentLabel] && !skip) {
+                currentMax = objectAreas[currentLabel];
+                currentMaxIndex = currentLabel;
+            }
+        }
+        tenLargestObjects[i] = currentMaxIndex;
+        checkSize++;
+    }
     
-//    for (int currentLabel = 1; currentLabel <= label; currentLabel++) {
-//        printf("\nObject Area: %d", objectAreas[currentLabel]);
-//    }
+    int firstMomentRows [label];
+    int firstMomentCols [label];
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            for (int currentLabel = 1; currentLabel <= label; currentLabel++) {
+                if(labels[row][col] == currentLabel) {
+                    firstMomentRows[currentLabel] += row;
+                    firstMomentCols[currentLabel] += col;
+                }
+            }
+        }
+    }
     
     cv::imshow("Display", newImage);
     cv::waitKey(0);
@@ -317,15 +372,18 @@ int main(int argc, char** argv )
         cv::waitKey(0);
     }
     int objectCount = 0;
-    std::vector<int> parentVec;
+//    std::vector<int> parentVec;
 
-    for (int i = 1; i < 2000; i++) {
-        printf("\nParent item: %d", parent[i]);
-        parentVec.push_back(parent[i]);
+    for (int i = 1; i < label; i++) {
+//        printf("\nParent item: %d", parent[i]);
+        if (parent[i] == 0) {
+            objectCount++;
+        }
+//        parentVec.push_back(parent[i]);
     }
-    std::sort(parentVec.begin(), parentVec.end());
-    parentVec.erase(unique(parentVec.begin(), parentVec.end() ), parentVec.end());
-    objectCount = parentVec.size();
+//    std::sort(parentVec.begin(), parentVec.end());
+//    parentVec.erase(unique(parentVec.begin(), parentVec.end() ), parentVec.end());
+//    objectCount = parentVec.size();
         
     printf("\nNumber of objects: %d\n", objectCount);
     printf("IDs used during first pass: %d\n", label);
