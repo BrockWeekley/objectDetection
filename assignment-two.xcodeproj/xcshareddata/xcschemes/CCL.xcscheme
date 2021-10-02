@@ -53,7 +53,7 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "-invert"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-size"
@@ -64,7 +64,7 @@
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "../test_pictures/bubbles.png"
+            argument = "../test_pictures/bw_shapes(1).png"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

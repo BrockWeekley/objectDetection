@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <opencv2/opencv.hpp>
 
+// Changing this variable to true will show just the perimeter of the output images
 bool perimeter = true;
 
 struct Color {
@@ -79,14 +80,12 @@ int main(int argc, char** argv )
             
         }
         image = cv::imread(arguments[argc - 3], 0);
-        printf("\n\n%s\n\n", arguments[argc - 3]);
     } else {
         int i;
         for (i = 1; i < argc; i++) {
             arguments[i] = argv[i];
         }
         image = cv::imread(arguments[argc - 2], 0);
-        printf("\n\n%s\n\n", arguments[argc - 2]);
     }
 
 
@@ -94,7 +93,7 @@ int main(int argc, char** argv )
         cv::cvtColor(image, image, cv::COLOR_BGR2GRAY);
     }
     
-    cv::threshold(image, image, 240, 255, cv::THRESH_BINARY);
+    cv::threshold(image, image, 100, 255, cv::THRESH_BINARY);
     
     int height = image.size[0];
     int width = image.size[1];
@@ -308,31 +307,31 @@ int main(int argc, char** argv )
             }
         }
     }
-    int tenLargestObjects [label];
+    int tenLargestIndexes [10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-    int checkSize = 0;
-    for (int i = 0; i < label; i++) {
-        int currentMax = 0;
-        int currentMaxIndex = 0;
-        for (int currentLabel = 1; currentLabel < label; label++) {
+    for (int i = 0; i < 10; i++) {
+        int maxIndex = label;
+        int maxArea = objectAreas[label];
+        for (int currentLabel = 0; currentLabel < label; currentLabel++) {
             bool skip = false;
-            for (int j = 0; j < checkSize; j++) {
-                if (tenLargestObjects[j] == currentLabel) {
-                    skip = true;
-                    break;
+            for (int j = 0; j < 10; j++) {
+                if (tenLargestIndexes[j] != 0) {
+                    if (tenLargestIndexes[j] == currentLabel) {
+                        skip = true;
+                        break;
+                    }
                 }
             }
-            if (currentMax < objectAreas[currentLabel] && !skip) {
-                currentMax = objectAreas[currentLabel];
-                currentMaxIndex = currentLabel;
+            if (!skip && maxArea < objectAreas[currentLabel]) {
+                maxIndex = currentLabel;
+                maxArea = objectAreas[currentLabel];
             }
         }
-        tenLargestObjects[i] = currentMaxIndex;
-        checkSize++;
+        tenLargestIndexes[i] = maxIndex;
     }
     
-    int firstMomentRows [label];
-    int firstMomentCols [label];
+    double firstMomentRows [label];
+    double firstMomentCols [label];
     for (int row = 0; row < height; row++) {
         for (int col = 0; col < width; col++) {
             for (int currentLabel = 1; currentLabel <= label; currentLabel++) {
@@ -342,6 +341,48 @@ int main(int argc, char** argv )
                 }
             }
         }
+    }
+    double varianceR [label];
+    double varianceC [label];
+    double covariance [label];
+    
+    for (int row = 0; row < height; row++) {
+        for (int col = 0; col < width; col++) {
+            for (int currentLabel = 1; currentLabel <= label; currentLabel++) {
+                if(labels[row][col] == currentLabel) {
+                    int currentArea = objectAreas[currentLabel];
+                    varianceR[currentLabel] += (row - (firstMomentRows[currentLabel] / currentArea))*(row - (firstMomentRows[currentLabel] / currentArea));
+                    varianceC[currentLabel] += (col - (firstMomentCols[currentLabel]) / currentArea)*(col - (firstMomentCols[currentLabel] / currentArea));
+                    covariance[currentLabel] += (row - (firstMomentRows[currentLabel] / currentArea))*(col - (firstMomentCols[currentLabel] / currentArea));
+                }
+            }
+        }
+    }
+    int objectCount = 0;
+
+    for (int i = 1; i < label; i++) {
+//        printf("\nParent item: %d", parent[i]);
+        if (parent[i] == 0) {
+            objectCount++;
+        }
+    }
+    
+    printf("\nNumber of objects: %d\n", objectCount);
+    printf("IDs used during first pass: %d\n", label);
+    
+    for (int i = 0; i < std::min(objectCount, 10); i++) {
+        printf(
+               "\n#%d) Object area: %d, Object perimeter: %d, Object center (col, row) (rounded): %f, %f, Covariance: %f %f %f %f",
+               i + 1,
+               objectAreas[tenLargestIndexes[i]],
+               objectPerimeters[tenLargestIndexes[i]],
+               firstMomentCols[tenLargestIndexes[i]] / objectAreas[tenLargestIndexes[i]],
+               firstMomentRows[tenLargestIndexes[i]] / objectAreas[tenLargestIndexes[i]],
+               varianceR[tenLargestIndexes[i]] / objectAreas[tenLargestIndexes[i]],
+               covariance[tenLargestIndexes[i]] / objectAreas[tenLargestIndexes[i]],
+               covariance[tenLargestIndexes[i]] / objectAreas[tenLargestIndexes[i]],
+               varianceC[tenLargestIndexes[i]] / objectAreas[tenLargestIndexes[i]]
+               );
     }
     
     cv::imshow("Display", newImage);
@@ -368,23 +409,8 @@ int main(int argc, char** argv )
                 }
             }
         }
+        cv::imwrite(argv[argc - 1], newImage);
         cv::imshow("Display", newImage);
         cv::waitKey(0);
     }
-    int objectCount = 0;
-//    std::vector<int> parentVec;
-
-    for (int i = 1; i < label; i++) {
-//        printf("\nParent item: %d", parent[i]);
-        if (parent[i] == 0) {
-            objectCount++;
-        }
-//        parentVec.push_back(parent[i]);
-    }
-//    std::sort(parentVec.begin(), parentVec.end());
-//    parentVec.erase(unique(parentVec.begin(), parentVec.end() ), parentVec.end());
-//    objectCount = parentVec.size();
-        
-    printf("\nNumber of objects: %d\n", objectCount);
-    printf("IDs used during first pass: %d\n", label);
 }
